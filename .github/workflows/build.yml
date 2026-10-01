@@ -1,62 +1,30 @@
-name: build
+name: Build Mod JAR
+
 on:
-  push:
-    branches:
-      - 'main'
-    paths:
-      - 'src/**'
   workflow_dispatch:
-    inputs:
-      publish:
-        description: 'Publish to Maven/Curseforge/Modrinth'
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set Commit Hash
-        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
-      - name: Setup JDK
-        uses: actions/setup-java@v5
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-      - name: Setup Permissions
-        run: chmod +x ./gradlew
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon
 
-      - name: Check Dependencies
-        run: ./gradlew dependencies
-
-      - name: Build
-        run: |
-          if [ "${{ inputs.publish }}" = "true" ]; then
-            ./gradlew clean assemble --stacktrace
-          else
-            ./gradlew assemble --stacktrace -PcommitHash="${{ env.SHORT_SHA }}"
-          fi
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v7
+      - name: Upload Mod JAR Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: build-${{ env.SHORT_SHA }}
-          path: build/libs/
-
-      - name: Publish to Maven
-        if: ${{ inputs.publish }}
-        run: ./gradlew publish --stacktrace -PCrystaelixMavenUsername="${{ secrets.MAVEN_USERNAME }}" -PCrystaelixMavenPassword="${{ secrets.MAVEN_PASSWORD }}"
-
-      - name: Publish to Curseforge/Modrinth
-        if: ${{ inputs.publish }}
-        run: ./gradlew publishMods --stacktrace -Pcurseforge.token="${{ secrets.CURSEFORGE_TOKEN }}" -Pmodrinth.token="${{ secrets.MODRINTH_TOKEN }}"
+          name: Create-Simurail-JAR
+          path: build/libs/*.jar
